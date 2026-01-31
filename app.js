@@ -11,6 +11,16 @@ class ConfigEditor {
         // Track modified values
         this.modifiedKeys = new Set();
         
+        // Read-only keys that cannot be edited
+        this.readOnlyKeys = new Set([
+            '$déesse_ui_global_variables_version',
+            '$is_déesse_ui_pack',
+            '$id_déesse_ui_global_variables_loaded',
+            '$déesse_ui_pack_name',
+            '$déesse_ui_pack_version',
+            '$déesse_start_text'
+        ]);
+        
         // Section definitions for UI organization
         this.sections = {
             'hud': {
@@ -290,6 +300,18 @@ class ConfigEditor {
                     '$dés:force_use_hud_menu_desktop',
                     '$dé:vanilla_id_offset'
                 ]
+            },
+            'readonly': {
+                title: 'Read-Only Variables',
+                icon: 'fa-lock',
+                keys: [
+                    '$déesse_ui_global_variables_version',
+                    '$is_déesse_ui_pack',
+                    '$id_déesse_ui_global_variables_loaded',
+                    '$déesse_ui_pack_name',
+                    '$déesse_ui_pack_version',
+                    '$déesse_start_text'
+                ]
             }
         };
 
@@ -428,28 +450,45 @@ class ConfigEditor {
         
         section.keys.forEach(key => {
             const value = this.currentConfig[key];
-            const defaultValue = DEFAULT_CONFIG[key];
-            const isModified = JSON.stringify(value) !== JSON.stringify(defaultValue);
+            const isReadOnly = this.readOnlyKeys.has(key);
             const meta = this.inputMetadata[key] || { type: this.inferType(value) };
             
             const card = document.createElement('div');
-            card.className = `setting-card ${isModified ? 'modified' : ''}`;
+            card.className = `setting-card ${isReadOnly ? 'read-only' : ''}`;
             card.dataset.key = key;
             
             card.innerHTML = `
                 <div class="setting-header">
-                    <div class="setting-key">${key}</div>
+                    <div class="setting-key">
+                        ${key}
+                        ${isReadOnly ? '<span class="read-only-badge"><i class="fas fa-lock"></i> READ-ONLY</span>' : ''}
+                    </div>
                     <div class="setting-description">${this.getDescription(key)}</div>
                 </div>
                 <div class="control-wrapper">
-                    ${this.renderControl(key, value, meta)}
+                    ${isReadOnly ? this.renderReadOnly(value) : this.renderControl(key, value, meta)}
                 </div>
             `;
             
             grid.appendChild(card);
         });
         
-        this.attachControlListeners();
+        if (!section.keys.every(key => this.readOnlyKeys.has(key))) {
+            this.attachControlListeners();
+        }
+    }
+
+    renderReadOnly(value) {
+        const displayValue = typeof value === 'string' ? `"${value}"` : 
+                            Array.isArray(value) ? `[${value.join(', ')}]` : 
+                            String(value);
+        
+        return `
+            <div class="read-only-value">
+                <i class="fas fa-lock"></i>
+                <code>${displayValue}</code>
+            </div>
+        `;
     }
 
     renderControl(key, value, meta) {
@@ -629,6 +668,8 @@ class ConfigEditor {
     // ==================== LOGIC ====================
 
     updateValue(key, value) {
+        if (this.readOnlyKeys.has(key)) return; // Prevent editing read-only keys
+        
         const oldValue = this.currentConfig[key];
         this.currentConfig[key] = value;
         
@@ -650,7 +691,19 @@ class ConfigEditor {
 
     updateJsonPreview() {
         const jsonCode = document.getElementById('jsonCode');
-        const jsonStr = JSON.stringify(this.currentConfig, null, 2);
+        
+        // Create a copy of config with read-only keys marked
+        const displayConfig = {};
+        for (const [key, value] of Object.entries(this.currentConfig)) {
+            if (this.readOnlyKeys.has(key)) {
+                displayConfig[`🔒 ${key}`] = value;
+            } else {
+                displayConfig[key] = value;
+            }
+        }
+        
+        const jsonStr = JSON.stringify(displayConfig, null, 2)
+            .replace(/"🔒 /g, '"'); // Remove lock emoji from actual output but keep visual indication
         
         // Syntax highlighting
         const highlighted = jsonStr
@@ -665,7 +718,10 @@ class ConfigEditor {
 
     showChangeIndicator() {
         const indicator = document.getElementById('changeIndicator');
-        if (this.modifiedKeys.size > 0) {
+        // Only count non-read-only modified keys
+        const editableModified = Array.from(this.modifiedKeys).filter(key => !this.readOnlyKeys.has(key));
+        
+        if (editableModified.length > 0) {
             indicator.style.display = 'inline-flex';
         } else {
             indicator.style.display = 'none';
@@ -675,7 +731,17 @@ class ConfigEditor {
     resetToDefault() {
         if (!confirm('Are you sure you want to reset all settings to default?')) return;
         
+        // Preserve read-only values
+        const readOnlyValues = {};
+        this.readOnlyKeys.forEach(key => {
+            readOnlyValues[key] = this.currentConfig[key];
+        });
+        
         this.currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        
+        // Restore read-only values (though they should be same as default)
+        Object.assign(this.currentConfig, readOnlyValues);
+        
         this.modifiedKeys.clear();
         this.renderSection(this.currentSection);
         this.updateJsonPreview();
@@ -780,28 +846,32 @@ class ConfigEditor {
         
         matchingKeys.forEach(key => {
             const value = this.currentConfig[key];
-            const defaultValue = DEFAULT_CONFIG[key];
-            const isModified = JSON.stringify(value) !== JSON.stringify(defaultValue);
+            const isReadOnly = this.readOnlyKeys.has(key);
             const meta = this.inputMetadata[key] || { type: this.inferType(value) };
             
             const card = document.createElement('div');
-            card.className = `setting-card ${isModified ? 'modified' : ''}`;
+            card.className = `setting-card ${isReadOnly ? 'read-only' : ''}`;
             card.dataset.key = key;
             
             card.innerHTML = `
                 <div class="setting-header">
-                    <div class="setting-key">${key}</div>
+                    <div class="setting-key">
+                        ${key}
+                        ${isReadOnly ? '<span class="read-only-badge"><i class="fas fa-lock"></i> READ-ONLY</span>' : ''}
+                    </div>
                     <div class="setting-description">${this.getDescription(key)}</div>
                 </div>
                 <div class="control-wrapper">
-                    ${this.renderControl(key, value, meta)}
+                    ${isReadOnly ? this.renderReadOnly(value) : this.renderControl(key, value, meta)}
                 </div>
             `;
             
             grid.appendChild(card);
         });
         
-        this.attachControlListeners();
+        if (!matchingKeys.every(key => this.readOnlyKeys.has(key))) {
+            this.attachControlListeners();
+        }
     }
 
     // ==================== HELPERS ====================
@@ -815,6 +885,12 @@ class ConfigEditor {
 
     getDescription(key) {
         const descriptions = {
+            '$déesse_ui_global_variables_version': 'Global variables version (Read-Only)',
+            '$is_déesse_ui_pack': 'Compatibility flag for Déesse UI Pack (Read-Only)',
+            '$id_déesse_ui_global_variables_loaded': 'Global variables loaded flag (Read-Only)',
+            '$déesse_ui_pack_name': 'Name of the UI Pack (Read-Only)',
+            '$déesse_ui_pack_version': 'Version of the UI Pack (Read-Only)',
+            '$déesse_start_text': 'Startup text display (Read-Only)',
             '$dé:show_inventory_full_notification': 'Show notification when inventory is full',
             '$dé:inv_full_notification_duration': 'Duration of inventory full notification (seconds)',
             '$dé:show_world_height_meter': 'Display world height meter on HUD',
