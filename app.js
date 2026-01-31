@@ -600,14 +600,12 @@ class ConfigEditor {
             this.downloadConfig();
         });
         
-        // JSON Window controls
+        // JSON Window controls - ONLY MINIMIZE (close button removed)
         document.getElementById('minimizeJson').addEventListener('click', () => {
             document.getElementById('jsonWindow').classList.toggle('minimized');
         });
         
-        document.getElementById('closeJson').addEventListener('click', () => {
-            document.getElementById('jsonWindow').style.display = 'none';
-        });
+        // Close button handler removed as requested
     }
 
     attachControlListeners() {
@@ -729,7 +727,6 @@ class ConfigEditor {
 
     updateJsonPreview() {
         const jsonCode = document.getElementById('jsonCode');
-        const jsonContent = document.getElementById('jsonContent');
         
         // Build JSON with line-by-line highlighting
         const lines = [];
