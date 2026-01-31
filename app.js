@@ -14,6 +14,9 @@ class ConfigEditor {
         // Currently focused/last edited key for highlighting
         this.activeKey = null;
         
+        // Sidebar state (desktop only)
+        this.sidebarVisible = true;
+        
         // Read-only keys that cannot be edited
         this.readOnlyKeys = new Set([
             '$déesse_ui_global_variables_version',
@@ -411,7 +414,45 @@ class ConfigEditor {
         this.renderSection(this.currentSection);
         this.setupEventListeners();
         this.setupDraggableWindow();
+        this.setupSidebarToggle(); // Setup sidebar toggle functionality
         this.updateJsonPreview();
+    }
+
+    // ==================== SIDEBAR TOGGLE (DESKTOP ONLY) ====================
+
+    setupSidebarToggle() {
+        const toggleBtn = document.getElementById('toggleSidebarBtn');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (!toggleBtn) return; // Safety check
+        
+        toggleBtn.addEventListener('click', () => {
+            // Only work on desktop (button is hidden on mobile via CSS)
+            if (window.innerWidth > 768) {
+                this.sidebarVisible = !this.sidebarVisible;
+                
+                if (this.sidebarVisible) {
+                    sidebar.classList.remove('hidden');
+                    toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Hide Sidebar</span>';
+                    toggleBtn.classList.remove('sidebar-hidden');
+                } else {
+                    sidebar.classList.add('hidden');
+                    toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Show Sidebar</span>';
+                    toggleBtn.classList.add('sidebar-hidden');
+                }
+            }
+        });
+        
+        // Handle window resize - restore sidebar if going to mobile, keep state if going to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 768) {
+                // Mobile: ensure sidebar is visible (mobile layout handles it)
+                sidebar.classList.remove('hidden');
+                this.sidebarVisible = true;
+                toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Hide Sidebar</span>';
+                toggleBtn.classList.remove('sidebar-hidden');
+            }
+        });
     }
 
     // ==================== RENDERING ====================
