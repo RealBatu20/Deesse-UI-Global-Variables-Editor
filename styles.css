@@ -43,6 +43,9 @@
     --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
     --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
     --shadow-lg: 0 10px 25px rgba(0,0,0,0.5);
+    
+    /* Sidebar width variable for transitions */
+    --sidebar-width: 280px;
 }
 
 /* Reset & Base */
@@ -157,6 +160,22 @@ body {
     border: 2px solid #555;
 }
 
+.btn-secondary:hover {
+    background: #666;
+}
+
+/* Toggle Sidebar Button Active State (when sidebar is hidden) */
+.btn-secondary.sidebar-hidden {
+    background: var(--mc-diamond);
+    border-color: var(--mc-diamond);
+    color: var(--mc-dark-bg);
+}
+
+/* Desktop Only - Hidden on Mobile */
+.desktop-only {
+    display: flex;
+}
+
 /* ==========================================
    LAYOUT
    ========================================== */
@@ -164,13 +183,14 @@ body {
     display: flex;
     margin-top: 80px;
     min-height: calc(100vh - 80px);
+    transition: all 0.3s ease;
 }
 
 /* ==========================================
    SIDEBAR NAVIGATION
    ========================================== */
 .sidebar {
-    width: 280px;
+    width: var(--sidebar-width);
     background: var(--mc-panel-bg);
     border-right: 2px solid var(--mc-border);
     padding: var(--spacing-lg);
@@ -178,6 +198,16 @@ body {
     height: calc(100vh - 80px);
     overflow-y: auto;
     z-index: 100;
+    transition: transform 0.3s ease, width 0.3s ease;
+    transform: translateX(0);
+}
+
+.sidebar.hidden {
+    transform: translateX(-100%);
+    width: 0;
+    padding: 0;
+    border: none;
+    overflow: hidden;
 }
 
 .nav-header {
@@ -190,10 +220,20 @@ body {
     margin-bottom: var(--spacing-lg);
     padding-bottom: var(--spacing-md);
     border-bottom: 2px solid var(--mc-border);
+    transition: opacity 0.2s ease;
+}
+
+.sidebar.hidden .nav-header {
+    opacity: 0;
 }
 
 .nav-list {
     list-style: none;
+    transition: opacity 0.2s ease;
+}
+
+.sidebar.hidden .nav-list {
+    opacity: 0;
 }
 
 .nav-item {
@@ -234,10 +274,19 @@ body {
    ========================================== */
 .editor {
     flex: 1;
-    margin-left: 280px;
+    margin-left: var(--sidebar-width);
     padding: var(--spacing-xl);
-    max-width: calc(100% - 280px);
+    max-width: calc(100% - var(--sidebar-width));
     padding-bottom: 400px; /* Space for JSON window */
+    transition: margin-left 0.3s ease, max-width 0.3s ease;
+}
+
+/* When sidebar is hidden on desktop */
+.sidebar.hidden ~ .editor {
+    margin-left: 0;
+    max-width: 100%;
+    padding-left: var(--spacing-xl);
+    padding-right: var(--spacing-xl);
 }
 
 .editor-header {
@@ -798,6 +847,11 @@ body {
         font-size: 1.2rem;
     }
     
+    /* Hide toggle sidebar button on mobile */
+    .desktop-only {
+        display: none !important;
+    }
+    
     .container {
         flex-direction: column;
         margin-top: 120px;
@@ -810,6 +864,14 @@ body {
         border-right: none;
         border-bottom: 2px solid var(--mc-border);
         padding: var(--spacing-md);
+        transform: none !important; /* Never hide on mobile */
+    }
+    
+    .sidebar.hidden {
+        transform: none !important; /* Override hidden state on mobile */
+        width: 100%;
+        padding: var(--spacing-md);
+        border-bottom: 2px solid var(--mc-border);
     }
     
     .nav-list {
@@ -829,10 +891,15 @@ body {
     }
     
     .editor {
-        margin-left: 0;
-        max-width: 100%;
+        margin-left: 0 !important; /* Always full width on mobile */
+        max-width: 100% !important;
         padding: var(--spacing-md);
         padding-bottom: 250px;
+    }
+    
+    .sidebar.hidden ~ .editor {
+        margin-left: 0 !important;
+        max-width: 100% !important;
     }
     
     .settings-grid {
