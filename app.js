@@ -11,6 +11,9 @@ class ConfigEditor {
         // Track modified values
         this.modifiedKeys = new Set();
         
+        // Currently focused/last edited key for highlighting
+        this.activeKey = null;
+        
         // Read-only keys that cannot be edited
         this.readOnlyKeys = new Set([
             '$déesse_ui_global_variables_version',
@@ -612,6 +615,7 @@ class ConfigEditor {
         document.querySelectorAll('.toggle[data-type="boolean"]').forEach(toggle => {
             toggle.addEventListener('click', () => {
                 const key = toggle.dataset.key;
+                this.activeKey = key;
                 const newValue = !toggle.classList.contains('active');
                 toggle.classList.toggle('active');
                 toggle.nextElementSibling.textContent = newValue ? 'Enabled' : 'Disabled';
@@ -621,108 +625,174 @@ class ConfigEditor {
         
         // Selects
         document.querySelectorAll('select[data-type="select"]').forEach(select => {
+            select.addEventListener('focus', () => {
+                this.activeKey = select.dataset.key;
+                this.updateJsonPreview();
+            });
             select.addEventListener('change', () => {
+                this.activeKey = select.dataset.key;
                 this.updateValue(select.dataset.key, select.value);
             });
         });
         
-        // Sliders
+        // Sliders - REAL TIME UPDATE
         document.querySelectorAll('input[data-type="slider"]').forEach(slider => {
+            slider.addEventListener('focus', () => {
+                this.activeKey = slider.dataset.key;
+            });
             slider.addEventListener('input', () => {
+                this.activeKey = slider.dataset.key;
                 slider.nextElementSibling.textContent = slider.value;
-                this.updateValue(slider.dataset.key, parseFloat(slider.value));
+                this.updateValue(slider.dataset.key, parseFloat(slider.value), true);
             });
         });
         
         // Numbers
         document.querySelectorAll('input[data-type="number"]').forEach(input => {
+            input.addEventListener('focus', () => {
+                this.activeKey = input.dataset.key;
+                this.updateJsonPreview();
+            });
+            input.addEventListener('input', () => {
+                this.activeKey = input.dataset.key;
+                let val = parseInt(input.value) || 0;
+                if (input.min && val < parseInt(input.min)) val = parseInt(input.min);
+                if (input.max && val > parseInt(input.max)) val = parseInt(input.max);
+                this.updateValue(input.dataset.key, val, true);
+            });
             input.addEventListener('change', () => {
-                let val = parseInt(input.value);
+                let val = parseInt(input.value) || 0;
                 if (input.min && val < parseInt(input.min)) val = parseInt(input.min);
                 if (input.max && val > parseInt(input.max)) val = parseInt(input.max);
                 input.value = val;
-                this.updateValue(input.dataset.key, val);
+                this.updateValue(input.dataset.key, val, true);
             });
         });
         
-        // Arrays
+        // Arrays - REAL TIME UPDATE
         document.querySelectorAll('[data-type="array"]').forEach(container => {
             const key = container.dataset.key;
             const inputs = container.querySelectorAll('input');
             inputs.forEach(input => {
-                input.addEventListener('change', () => {
+                input.addEventListener('focus', () => {
+                    this.activeKey = key;
+                    this.updateJsonPreview();
+                });
+                input.addEventListener('input', () => {
+                    this.activeKey = key;
                     const newArray = Array.from(inputs).map(inp => parseFloat(inp.value) || 0);
-                    this.updateValue(key, newArray);
+                    this.updateValue(key, newArray, true);
                 });
             });
         });
         
         // Text inputs
         document.querySelectorAll('input[data-type="text"]').forEach(input => {
-            input.addEventListener('change', () => {
-                this.updateValue(input.dataset.key, input.value);
+            input.addEventListener('focus', () => {
+                this.activeKey = input.dataset.key;
+                this.updateJsonPreview();
+            });
+            input.addEventListener('input', () => {
+                this.activeKey = input.dataset.key;
+                this.updateValue(input.dataset.key, input.value, true);
             });
         });
     }
 
     // ==================== LOGIC ====================
 
-    updateValue(key, value) {
-        if (this.readOnlyKeys.has(key)) return; // Prevent editing read-only keys
+    updateValue(key, value, isRealTime = false) {
+        if (this.readOnlyKeys.has(key)) return;
         
-        const oldValue = this.currentConfig[key];
         this.currentConfig[key] = value;
         
         // Check if modified from default
         const isModified = JSON.stringify(value) !== JSON.stringify(DEFAULT_CONFIG[key]);
-        const card = document.querySelector(`[data-key="${key}"]`).closest('.setting-card');
+        const card = document.querySelector(`[data-key="${key}"]`);
         
-        if (isModified) {
-            this.modifiedKeys.add(key);
-            card.classList.add('modified');
-        } else {
-            this.modifiedKeys.delete(key);
-            card.classList.remove('modified');
+        if (card) {
+            if (isModified) {
+                this.modifiedKeys.add(key);
+                card.classList.add('modified');
+            } else {
+                this.modifiedKeys.delete(key);
+                card.classList.remove('modified');
+            }
         }
         
+        // Always update preview for real-time feel
         this.updateJsonPreview();
+        
+        // Show change indicator
         this.showChangeIndicator();
     }
 
     updateJsonPreview() {
         const jsonCode = document.getElementById('jsonCode');
+        const jsonContent = document.getElementById('jsonContent');
         
-        // Create a copy of config with read-only keys marked
-        const displayConfig = {};
-        for (const [key, value] of Object.entries(this.currentConfig)) {
-            if (this.readOnlyKeys.has(key)) {
-                displayConfig[`🔒 ${key}`] = value;
-            } else {
-                displayConfig[key] = value;
+        // Build JSON with line-by-line highlighting
+        const lines = [];
+        const keys = Object.keys(this.currentConfig);
+        
+        lines.push('{');
+        
+        keys.forEach((key, index) => {
+            const value = this.currentConfig[key];
+            const isLast = index === keys.length - 1;
+            const comma = isLast ? '' : ',';
+            
+            // Check if this is the active key
+            const isActive = key === this.activeKey;
+            const isModified = this.modifiedKeys.has(key) && !this.readOnlyKeys.has(key);
+            
+            let lineClass = 'json-line';
+            if (isActive) lineClass += ' active-line';
+            if (isModified) lineClass += ' modified-line';
+            if (this.readOnlyKeys.has(key)) lineClass += ' readonly-line';
+            
+            const formattedValue = this.formatJsonValue(value);
+            const line = `  "${key}": ${formattedValue}${comma}`;
+            
+            // Syntax highlighting for the line
+            const highlightedLine = line
+                .replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>')
+                .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
+                .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
+                .replace(/: ([\d.]+)/g, ': <span class="json-number">$1</span>')
+                .replace(/: (\[.*?\])/g, ': <span class="json-array">$1</span>');
+            
+            lines.push(`<div class="${lineClass}" data-key="${key}">${highlightedLine}</div>`);
+        });
+        
+        lines.push('}');
+        
+        jsonCode.innerHTML = lines.join('\n');
+        
+        // Scroll to active line if exists
+        if (this.activeKey) {
+            const activeLine = jsonCode.querySelector(`[data-key="${this.activeKey}"]`);
+            if (activeLine) {
+                activeLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-        
-        const jsonStr = JSON.stringify(displayConfig, null, 2)
-            .replace(/"🔒 /g, '"'); // Remove lock emoji from actual output but keep visual indication
-        
-        // Syntax highlighting
-        const highlighted = jsonStr
-            .replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>')
-            .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
-            .replace(/: (true|false)/g, ': <span class="json-boolean">$1</span>')
-            .replace(/: ([\d.]+)/g, ': <span class="json-number">$1</span>')
-            .replace(/: (null)/g, ': <span class="json-null">$1</span>');
-        
-        jsonCode.innerHTML = highlighted;
+    }
+
+    formatJsonValue(value) {
+        if (typeof value === 'string') return `"${value}"`;
+        if (typeof value === 'boolean') return value;
+        if (typeof value === 'number') return value;
+        if (Array.isArray(value)) return `[${value.join(', ')}]`;
+        return value;
     }
 
     showChangeIndicator() {
         const indicator = document.getElementById('changeIndicator');
-        // Only count non-read-only modified keys
         const editableModified = Array.from(this.modifiedKeys).filter(key => !this.readOnlyKeys.has(key));
         
         if (editableModified.length > 0) {
             indicator.style.display = 'inline-flex';
+            indicator.innerHTML = `<i class="fas fa-circle"></i> ${editableModified.length} Unsaved Change${editableModified.length > 1 ? 's' : ''}`;
         } else {
             indicator.style.display = 'none';
         }
@@ -731,18 +801,16 @@ class ConfigEditor {
     resetToDefault() {
         if (!confirm('Are you sure you want to reset all settings to default?')) return;
         
-        // Preserve read-only values
         const readOnlyValues = {};
         this.readOnlyKeys.forEach(key => {
             readOnlyValues[key] = this.currentConfig[key];
         });
         
         this.currentConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-        
-        // Restore read-only values (though they should be same as default)
         Object.assign(this.currentConfig, readOnlyValues);
         
         this.modifiedKeys.clear();
+        this.activeKey = null;
         this.renderSection(this.currentSection);
         this.updateJsonPreview();
         this.showChangeIndicator();
@@ -777,7 +845,6 @@ class ConfigEditor {
         document.addEventListener('mousemove', drag);
         document.addEventListener('mouseup', dragEnd);
         
-        // Touch support
         header.addEventListener('touchstart', dragStart);
         document.addEventListener('touchmove', drag);
         document.addEventListener('touchend', dragEnd);
