@@ -414,7 +414,7 @@ class ConfigEditor {
         this.renderSection(this.currentSection);
         this.setupEventListeners();
         this.setupDraggableWindow();
-        this.setupSidebarToggle(); // Setup sidebar toggle functionality
+        this.setupSidebarToggle();
         this.updateJsonPreview();
     }
 
@@ -424,33 +424,32 @@ class ConfigEditor {
         const toggleBtn = document.getElementById('toggleSidebarBtn');
         const sidebar = document.getElementById('sidebar');
         
-        if (!toggleBtn) return; // Safety check
+        if (!toggleBtn) return;
         
         toggleBtn.addEventListener('click', () => {
-            // Only work on desktop (button is hidden on mobile via CSS)
             if (window.innerWidth > 768) {
                 this.sidebarVisible = !this.sidebarVisible;
                 
                 if (this.sidebarVisible) {
                     sidebar.classList.remove('hidden');
-                    toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Hide Sidebar</span>';
                     toggleBtn.classList.remove('sidebar-hidden');
+                    toggleBtn.title = 'Hide Sidebar';
                 } else {
                     sidebar.classList.add('hidden');
-                    toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Show Sidebar</span>';
                     toggleBtn.classList.add('sidebar-hidden');
+                    toggleBtn.title = 'Show Sidebar';
                 }
             }
         });
         
-        // Handle window resize - restore sidebar if going to mobile, keep state if going to desktop
         window.addEventListener('resize', () => {
             if (window.innerWidth <= 768) {
-                // Mobile: ensure sidebar is visible (mobile layout handles it)
                 sidebar.classList.remove('hidden');
                 this.sidebarVisible = true;
-                toggleBtn.innerHTML = '<i class="fas fa-bars"></i> <span class="btn-text">Hide Sidebar</span>';
-                toggleBtn.classList.remove('sidebar-hidden');
+                if (toggleBtn) {
+                    toggleBtn.classList.remove('sidebar-hidden');
+                    toggleBtn.title = 'Hide Sidebar';
+                }
             }
         });
     }
@@ -478,16 +477,13 @@ class ConfigEditor {
         this.currentSection = sectionKey;
         const section = this.sections[sectionKey];
         
-        // Update active nav
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.section === sectionKey);
         });
         
-        // Update title
         document.getElementById('currentSection').innerHTML = 
             `<i class="fas ${section.icon}"></i> ${section.title}`;
         
-        // Render settings
         const container = document.getElementById('editorContent');
         container.innerHTML = '<div class="settings-grid"></div>';
         const grid = container.querySelector('.settings-grid');
@@ -631,22 +627,24 @@ class ConfigEditor {
             this.handleSearch(e.target.value);
         });
         
-        // Reset button
-        document.getElementById('resetBtn').addEventListener('click', () => {
-            this.resetToDefault();
-        });
+        // Reset buttons (desktop and mobile)
+        const resetBtn = document.getElementById('resetBtn');
+        const resetBtnMobile = document.getElementById('resetBtnMobile');
         
-        // Download button
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            this.downloadConfig();
-        });
+        if (resetBtn) resetBtn.addEventListener('click', () => this.resetToDefault());
+        if (resetBtnMobile) resetBtnMobile.addEventListener('click', () => this.resetToDefault());
         
-        // JSON Window controls - ONLY MINIMIZE (close button removed)
+        // Download buttons (desktop and mobile)
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadBtnMobile = document.getElementById('downloadBtnMobile');
+        
+        if (downloadBtn) downloadBtn.addEventListener('click', () => this.downloadConfig());
+        if (downloadBtnMobile) downloadBtnMobile.addEventListener('click', () => this.downloadConfig());
+        
+        // JSON Window minimize
         document.getElementById('minimizeJson').addEventListener('click', () => {
             document.getElementById('jsonWindow').classList.toggle('minimized');
         });
-        
-        // Close button handler removed as requested
     }
 
     attachControlListeners() {
@@ -674,7 +672,7 @@ class ConfigEditor {
             });
         });
         
-        // Sliders - REAL TIME UPDATE
+        // Sliders - REAL TIME
         document.querySelectorAll('input[data-type="slider"]').forEach(slider => {
             slider.addEventListener('focus', () => {
                 this.activeKey = slider.dataset.key;
@@ -699,16 +697,9 @@ class ConfigEditor {
                 if (input.max && val > parseInt(input.max)) val = parseInt(input.max);
                 this.updateValue(input.dataset.key, val, true);
             });
-            input.addEventListener('change', () => {
-                let val = parseInt(input.value) || 0;
-                if (input.min && val < parseInt(input.min)) val = parseInt(input.min);
-                if (input.max && val > parseInt(input.max)) val = parseInt(input.max);
-                input.value = val;
-                this.updateValue(input.dataset.key, val, true);
-            });
         });
         
-        // Arrays - REAL TIME UPDATE
+        // Arrays - REAL TIME
         document.querySelectorAll('[data-type="array"]').forEach(container => {
             const key = container.dataset.key;
             const inputs = container.querySelectorAll('input');
@@ -745,7 +736,6 @@ class ConfigEditor {
         
         this.currentConfig[key] = value;
         
-        // Check if modified from default
         const isModified = JSON.stringify(value) !== JSON.stringify(DEFAULT_CONFIG[key]);
         const card = document.querySelector(`[data-key="${key}"]`);
         
@@ -759,17 +749,13 @@ class ConfigEditor {
             }
         }
         
-        // Always update preview for real-time feel
         this.updateJsonPreview();
-        
-        // Show change indicator
         this.showChangeIndicator();
     }
 
     updateJsonPreview() {
         const jsonCode = document.getElementById('jsonCode');
         
-        // Build JSON with line-by-line highlighting
         const lines = [];
         const keys = Object.keys(this.currentConfig);
         
@@ -780,7 +766,6 @@ class ConfigEditor {
             const isLast = index === keys.length - 1;
             const comma = isLast ? '' : ',';
             
-            // Check if this is the active key
             const isActive = key === this.activeKey;
             const isModified = this.modifiedKeys.has(key) && !this.readOnlyKeys.has(key);
             
@@ -792,7 +777,6 @@ class ConfigEditor {
             const formattedValue = this.formatJsonValue(value);
             const line = `  "${key}": ${formattedValue}${comma}`;
             
-            // Syntax highlighting for the line
             const highlightedLine = line
                 .replace(/"([^"]+)":/g, '<span class="json-key">"$1":</span>')
                 .replace(/: "([^"]*)"/g, ': <span class="json-string">"$1"</span>')
@@ -807,7 +791,6 @@ class ConfigEditor {
         
         jsonCode.innerHTML = lines.join('\n');
         
-        // Scroll to active line if exists
         if (this.activeKey) {
             const activeLine = jsonCode.querySelector(`[data-key="${this.activeKey}"]`);
             if (activeLine) {
@@ -830,7 +813,7 @@ class ConfigEditor {
         
         if (editableModified.length > 0) {
             indicator.style.display = 'inline-flex';
-            indicator.innerHTML = `<i class="fas fa-circle"></i> ${editableModified.length} Unsaved Change${editableModified.length > 1 ? 's' : ''}`;
+            indicator.innerHTML = `<i class="fas fa-circle"></i> ${editableModified.length}`;
         } else {
             indicator.style.display = 'none';
         }
@@ -868,7 +851,7 @@ class ConfigEditor {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        this.showToast('Configuration downloaded successfully!', 'success');
+        this.showToast('Configuration downloaded!', 'success');
     }
 
     setupDraggableWindow() {
