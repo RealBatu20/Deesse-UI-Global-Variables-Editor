@@ -24,6 +24,8 @@
     --mc-danger: #B02E26;
     --mc-readonly: #6B4F2A;
     --mc-readonly-bg: #3d3220;
+    --mc-active-line: #264f78;
+    --mc-modified-line: #5a4a20;
     
     /* Spacing */
     --spacing-xs: 0.25rem;
@@ -235,6 +237,7 @@ body {
     margin-left: 280px;
     padding: var(--spacing-xl);
     max-width: calc(100% - 280px);
+    padding-bottom: 400px; /* Space for JSON window */
 }
 
 .editor-header {
@@ -585,28 +588,28 @@ body {
 }
 
 /* ==========================================
-   DRAGGABLE JSON WINDOW
+   DRAGGABLE JSON WINDOW - COMPACT & LIVE
    ========================================== */
 .json-window {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 500px;
+    width: 450px;
+    height: 300px;
     max-width: 90vw;
+    max-height: 40vh;
     background: var(--mc-panel-bg);
     border: 2px solid var(--mc-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
     z-index: 1000;
     overflow: hidden;
-    resize: both;
-    min-width: 300px;
-    min-height: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
 .json-window.minimized {
     height: 40px !important;
-    resize: none;
 }
 
 .json-window.minimized .json-content {
@@ -622,6 +625,8 @@ body {
     cursor: move;
     border-bottom: 2px solid var(--mc-border);
     user-select: none;
+    flex-shrink: 0;
+    height: 40px;
 }
 
 .json-title {
@@ -630,13 +635,17 @@ body {
     gap: var(--spacing-sm);
     font-weight: 600;
     color: var(--mc-gold);
+    font-size: 0.9rem;
 }
 
 .change-indicator {
     margin-left: var(--spacing-md);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--mc-warning);
     animation: pulse 2s infinite;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 @keyframes pulse {
@@ -657,6 +666,7 @@ body {
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-sm);
     transition: all 0.2s ease;
+    font-size: 0.8rem;
 }
 
 .json-btn:hover {
@@ -665,18 +675,52 @@ body {
 }
 
 .json-content {
-    height: calc(100% - 40px);
+    flex: 1;
     overflow: auto;
     background: #1e1e1e;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
 }
 
 .json-content pre {
     margin: 0;
-    padding: var(--spacing-md);
-    font-family: 'Fira Code', 'Courier New', monospace;
-    font-size: 0.85rem;
-    line-height: 1.5;
-    color: #d4d4d4;
+    padding: 0;
+}
+
+/* JSON Line Styling */
+.json-line {
+    padding: 2px 12px;
+    white-space: pre;
+    border-left: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.json-line:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+/* Active Line - Currently Editing */
+.json-line.active-line {
+    background: var(--mc-active-line);
+    border-left-color: var(--mc-diamond);
+    animation: highlightPulse 0.5s ease;
+}
+
+@keyframes highlightPulse {
+    0% { background: rgba(74, 237, 215, 0.4); }
+    100% { background: var(--mc-active-line); }
+}
+
+/* Modified Line - Changed from Default */
+.json-line.modified-line {
+    background: var(--mc-modified-line);
+    border-left-color: var(--mc-warning);
+}
+
+/* Read-Only Line */
+.json-line.readonly-line {
+    opacity: 0.6;
 }
 
 /* JSON Syntax Highlighting */
@@ -685,6 +729,19 @@ body {
 .json-number { color: #b5cea8; }
 .json-boolean { color: #569cd6; }
 .json-null { color: #569cd6; }
+.json-array { color: #dcdcaa; }
+
+/* Line Numbers */
+.json-line::before {
+    content: attr(data-line);
+    display: inline-block;
+    width: 30px;
+    color: var(--mc-text-muted);
+    text-align: right;
+    margin-right: 12px;
+    font-size: 0.75rem;
+    opacity: 0.5;
+}
 
 /* ==========================================
    TOAST NOTIFICATIONS
@@ -775,6 +832,7 @@ body {
         margin-left: 0;
         max-width: 100%;
         padding: var(--spacing-md);
+        padding-bottom: 250px;
     }
     
     .settings-grid {
@@ -782,9 +840,11 @@ body {
     }
     
     .json-window {
-        width: 90vw;
-        right: 5vw;
-        bottom: 10px;
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+        height: 200px;
+        max-height: 30vh;
     }
     
     .editor-header {
@@ -814,4 +874,13 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--mc-highlight);
+}
+
+/* JSON Window Scrollbar */
+.json-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.json-content::-webkit-scrollbar-thumb {
+    background: #444;
 }
