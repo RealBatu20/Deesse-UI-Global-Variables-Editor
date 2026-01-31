@@ -17,6 +17,10 @@
                 <h1>Déesse UI Config Editor</h1>
             </div>
             <div class="header-actions">
+                <!-- Hide Sidebar Button - Desktop Only -->
+                <button id="toggleSidebarBtn" class="btn btn-secondary desktop-only" title="Toggle Sidebar">
+                    <i class="fas fa-bars"></i> <span class="btn-text">Hide Sidebar</span>
+                </button>
                 <button id="resetBtn" class="btn btn-danger">
                     <i class="fas fa-rotate-left"></i> Reset to Default
                 </button>
@@ -28,9 +32,9 @@
     </header>
 
     <!-- Main Container -->
-    <div class="container">
+    <div class="container" id="mainContainer">
         <!-- Sidebar Navigation -->
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="nav-header">
                 <i class="fas fa-list"></i>
                 <span>Sections</span>
@@ -41,7 +45,7 @@
         </nav>
 
         <!-- Editor Content -->
-        <main class="editor">
+        <main class="editor" id="editor">
             <div class="editor-header">
                 <h2 id="currentSection">HUD Screen Configuration</h2>
                 <div class="search-box">
