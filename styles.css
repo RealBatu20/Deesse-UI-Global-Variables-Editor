@@ -22,6 +22,8 @@
     --mc-success: #5D8C47;
     --mc-warning: #F4D142;
     --mc-danger: #B02E26;
+    --mc-readonly: #6B4F2A;
+    --mc-readonly-bg: #3d3220;
     
     /* Spacing */
     --spacing-xs: 0.25rem;
@@ -330,6 +332,18 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+/* Read-Only Card Styling */
+.setting-card.read-only {
+    border-color: var(--mc-readonly);
+    background: linear-gradient(135deg, var(--mc-panel-bg) 0%, var(--mc-readonly-bg) 100%);
+    opacity: 0.9;
+}
+
+.setting-card.read-only:hover {
+    border-color: var(--mc-wood);
+    box-shadow: var(--shadow-sm);
+}
+
 .setting-header {
     margin-bottom: var(--spacing-md);
 }
@@ -341,15 +355,60 @@ body {
     background: rgba(0,0,0,0.3);
     padding: var(--spacing-xs) var(--spacing-sm);
     border-radius: var(--radius-sm);
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
     margin-bottom: var(--spacing-sm);
     word-break: break-all;
+    flex-wrap: wrap;
+}
+
+.read-only-badge {
+    background: var(--mc-readonly);
+    color: var(--mc-gold);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.read-only-badge i {
+    font-size: 0.65rem;
 }
 
 .setting-description {
     color: var(--mc-text-muted);
     font-size: 0.9rem;
     line-height: 1.4;
+}
+
+/* Read-Only Value Display */
+.read-only-value {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: rgba(0,0,0,0.4);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--mc-readonly);
+    color: var(--mc-text-muted);
+}
+
+.read-only-value i {
+    color: var(--mc-readonly);
+    font-size: 1.2rem;
+}
+
+.read-only-value code {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    color: var(--mc-gold);
+    font-size: 0.9rem;
+    background: rgba(0,0,0,0.3);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
 }
 
 /* ==========================================
